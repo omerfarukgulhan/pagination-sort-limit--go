@@ -1,12 +1,14 @@
 package persistence
 
 import (
-	"gorm.io/gorm"
+	"pagination/common/util/queryutils"
 	"pagination/domain/entities"
+
+	"gorm.io/gorm"
 )
 
 type IProductRepository interface {
-	GetProducts() ([]entities.Product, error)
+	GetProducts(pagination queryutils.Pagination) (queryutils.Pagination, error)
 	AddProduct(product entities.Product) (entities.Product, error)
 }
 
@@ -18,13 +20,14 @@ func NewProductRepository(db *gorm.DB) IProductRepository {
 	return &ProductRepository{db: db}
 }
 
-func (productRepository *ProductRepository) GetProducts() ([]entities.Product, error) {
-	var Products []entities.Product
-	result := productRepository.db.Find(&Products)
-	if result.Error != nil {
-		return nil, result.Error
+func (productRepository *ProductRepository) GetProducts(pagination queryutils.Pagination) (queryutils.Pagination, error) {
+	var products []entities.Product
+	queryResult := productRepository.db.Scopes(queryutils.Paginate(&products, &pagination, productRepository.db)).Find(&products)
+	if queryResult.Error != nil {
+		return queryutils.Pagination{}, queryResult.Error
 	}
-	return Products, nil
+	pagination.Rows = products
+	return pagination, nil
 }
 
 func (productRepository *ProductRepository) AddProduct(product entities.Product) (entities.Product, error) {

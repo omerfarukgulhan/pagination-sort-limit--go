@@ -1,12 +1,13 @@
 package service
 
 import (
+	"pagination/common/util/queryutils"
 	"pagination/domain/entities"
 	"pagination/persistence"
 )
 
 type IProductService interface {
-	GetProducts() ([]entities.Product, error)
+	GetProducts(pagination queryutils.Pagination) (queryutils.Pagination, error)
 	AddProduct(product entities.Product) (entities.Product, error)
 }
 
@@ -18,12 +19,12 @@ func NewProductService(productRepository persistence.IProductRepository) IProduc
 	return &ProductService{productRepository: productRepository}
 }
 
-func (productService *ProductService) GetProducts() ([]entities.Product, error) {
-	products, err := productService.productRepository.GetProducts()
+func (productService *ProductService) GetProducts(pagination queryutils.Pagination) (queryutils.Pagination, error) {
+	paginatedProducts, err := productService.productRepository.GetProducts(pagination)
 	if err != nil {
-		return nil, err
+		return queryutils.Pagination{}, err
 	}
-	return products, nil
+	return paginatedProducts, nil
 }
 
 func (productService *ProductService) AddProduct(product entities.Product) (entities.Product, error) {
