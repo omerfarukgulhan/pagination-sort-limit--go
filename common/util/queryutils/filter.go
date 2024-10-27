@@ -1,6 +1,8 @@
 package queryutils
 
 import (
+	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"strings"
@@ -12,8 +14,9 @@ type Filter struct {
 	Op    string
 }
 
-func ApplyFilter(filters []Filter) func(*gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
+func ApplyFilter(filters []Filter) (func(*gorm.DB) *gorm.DB, error) {
+	var errs []error
+	filterFunc := func(db *gorm.DB) *gorm.DB {
 		for _, filter := range filters {
 			switch filter.Op {
 			case "=", "eq":
@@ -29,20 +32,39 @@ func ApplyFilter(filters []Filter) func(*gorm.DB) *gorm.DB {
 			case "!=", "ne":
 				db = db.Where(filter.Field+" != ?", filter.Value)
 			case "LIKE", "like":
-				db = db.Where(filter.Field+" LIKE ?", "%"+filter.Value.(string)+"%")
+				valueStr, ok := filter.Value.(string)
+				if !ok {
+					errs = append(errs, fmt.Errorf("invalid value type for LIKE operation; expected string"))
+					continue
+				}
+				db = db.Where(filter.Field+" LIKE ?", "%"+valueStr+"%")
 			case "IN", "in":
-				values := strings.Split(filter.Value.(string), ",")
-				db = db.Where(filter.Field+" IN ?", values)
+				values, ok := filter.Value.(string)
+				if !ok {
+					errs = append(errs, fmt.Errorf("invalid value type for IN operation; expected comma-separated string"))
+					continue
+				}
+				db = db.Where(filter.Field+" IN ?", strings.Split(values, ","))
 			case "NOT IN", "not_in":
-				values := strings.Split(filter.Value.(string), ",")
-				db = db.Where(filter.Field+" NOT IN ?", values)
+				values, ok := filter.Value.(string)
+				if !ok {
+					errs = append(errs, fmt.Errorf("invalid value type for NOT IN operation; expected comma-separated string"))
+					continue
+				}
+				db = db.Where(filter.Field+" NOT IN ?", strings.Split(values, ","))
+			default:
+				errs = append(errs, fmt.Errorf("unsupported filter operation: %s", filter.Op))
 			}
 		}
 		return db
 	}
+	if len(errs) > 0 {
+		return filterFunc, fmt.Errorf("filter errors: %v", errs)
+	}
+	return filterFunc, nil
 }
 
-func ParseFilters(c *gin.Context) []Filter {
+func ParseFilters(c *gin.Context) ([]Filter, error) {
 	filterQuery := c.Request.URL.Query()
 	var filters []Filter
 	for key, values := range filterQuery {
@@ -51,10 +73,18 @@ func ParseFilters(c *gin.Context) []Filter {
 		}
 		keyParts := strings.Split(key, "[")
 		if len(keyParts) < 3 {
-			continue
+			return nil, errors.New("invalid filter format; expected 'filter[field][op]'")
 		}
+
 		field := strings.TrimSuffix(keyParts[1], "]")
 		op := strings.TrimSuffix(keyParts[2], "]")
+
+		// Validate operation
+		validOps := map[string]bool{"eq": true, "gt": true, "lt": true, "gte": true, "lte": true, "ne": true, "like": true, "in": true, "not_in": true}
+		if _, ok := validOps[op]; !ok {
+			return nil, errors.New("unsupported filter operation: " + op)
+		}
+
 		if len(values) > 0 {
 			filters = append(filters, Filter{
 				Field: field,
@@ -63,5 +93,5 @@ func ParseFilters(c *gin.Context) []Filter {
 			})
 		}
 	}
-	return filters
+	return filters, nil
 }

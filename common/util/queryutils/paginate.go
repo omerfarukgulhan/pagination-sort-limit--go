@@ -1,6 +1,7 @@
 package queryutils
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"math"
@@ -42,34 +43,36 @@ func (pagination *Pagination) GetSort() string {
 	return pagination.Sort
 }
 
-func Paginate(value interface{}, pagination *Pagination, db *gorm.DB) func(db *gorm.DB) *gorm.DB {
+func Paginate(value interface{}, pagination *Pagination, db *gorm.DB) (func(db *gorm.DB) *gorm.DB, error) {
 	var totalRows int64
-	db.Model(value).Count(&totalRows)
+	if err := db.Model(value).Count(&totalRows).Error; err != nil {
+		return nil, err
+	}
 
 	pagination.TotalRows = totalRows
 	pagination.TotalPages = int(math.Ceil(float64(totalRows) / float64(pagination.GetLimit())))
 
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Offset(pagination.GetOffset()).Limit(pagination.GetLimit()).Order(pagination.GetSort())
-	}
+	}, nil
 }
 
-func ParsePagination(c *gin.Context) Pagination {
+func ParsePagination(c *gin.Context) (Pagination, error) {
 	pageStr := c.DefaultQuery("page", "1")
 	limitStr := c.DefaultQuery("limit", "20")
 	sort := strings.ReplaceAll(c.DefaultQuery("sort", "id_desc"), "_", " ")
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
-		page = 1
+		return Pagination{}, errors.New("invalid page parameter; must be a positive integer")
 	}
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 {
-		limit = 20
+		return Pagination{}, errors.New("invalid limit parameter; must be a positive integer")
 	}
 	pagination := Pagination{
 		Limit: limit,
 		Page:  page,
 		Sort:  sort,
 	}
-	return pagination
+	return pagination, nil
 }
