@@ -23,14 +23,16 @@ func (pagination *Pagination) GetOffset() int {
 }
 
 func (pagination *Pagination) GetLimit() int {
-	if pagination.Limit == 0 {
+	if pagination.Limit <= 0 {
 		pagination.Limit = 10
+	} else if pagination.Limit > 20 {
+		pagination.Limit = 20
 	}
 	return pagination.Limit
 }
 
 func (pagination *Pagination) GetPage() int {
-	if pagination.Page == 0 {
+	if pagination.Page <= 0 {
 		pagination.Page = 1
 	}
 	return pagination.Page
@@ -43,14 +45,12 @@ func (pagination *Pagination) GetSort() string {
 	return pagination.Sort
 }
 
-func Paginate(value interface{}, pagination *Pagination, db *gorm.DB) (func(db *gorm.DB) *gorm.DB, error) {
-	var totalRows int64
-	if err := db.Model(value).Count(&totalRows).Error; err != nil {
+func PaginateQuery(model interface{}, pagination *Pagination, db *gorm.DB) (func(db *gorm.DB) *gorm.DB, error) {
+	if err := db.Model(model).Count(&pagination.TotalRows).Error; err != nil {
 		return nil, err
 	}
 
-	pagination.TotalRows = totalRows
-	pagination.TotalPages = int(math.Ceil(float64(totalRows) / float64(pagination.GetLimit())))
+	pagination.TotalPages = int(math.Ceil(float64(pagination.TotalRows) / float64(pagination.GetLimit())))
 
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Offset(pagination.GetOffset()).Limit(pagination.GetLimit()).Order(pagination.GetSort())
