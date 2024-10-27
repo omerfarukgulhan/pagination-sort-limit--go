@@ -65,14 +65,15 @@ func ParsePagination(c *gin.Context) (Pagination, error) {
 	if err != nil || page < 1 {
 		return Pagination{}, errors.New("invalid page parameter; must be a positive integer")
 	}
+
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit < 1 {
 		return Pagination{}, errors.New("invalid limit parameter; must be a positive integer")
 	}
-	pagination := Pagination{
+
+	return Pagination{
 		Limit: limit,
 		Page:  page,
 		Sort:  sort,
-	}
-	return pagination, nil
+	}, nil
 }
