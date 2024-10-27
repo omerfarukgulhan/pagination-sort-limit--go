@@ -7,7 +7,7 @@ import (
 )
 
 type IProductService interface {
-	GetProducts(pagination queryutils.Pagination) (queryutils.Pagination, error)
+	GetProducts(queryHandler queryutils.QueryHandler) (queryutils.QueryHandler, error)
 	AddProduct(product entities.Product) (entities.Product, error)
 }
 
@@ -19,12 +19,12 @@ func NewProductService(productRepository persistence.IProductRepository) IProduc
 	return &ProductService{productRepository: productRepository}
 }
 
-func (productService *ProductService) GetProducts(pagination queryutils.Pagination) (queryutils.Pagination, error) {
-	paginatedProducts, err := productService.productRepository.GetProducts(pagination)
+func (productService *ProductService) GetProducts(queryHandler queryutils.QueryHandler) (queryutils.QueryHandler, error) {
+	products, err := productService.productRepository.GetProducts(queryHandler)
 	if err != nil {
-		return queryutils.Pagination{}, err
+		return queryutils.QueryHandler{}, err
 	}
-	return paginatedProducts, nil
+	return products, nil
 }
 
 func (productService *ProductService) AddProduct(product entities.Product) (entities.Product, error) {

@@ -1,15 +1,13 @@
 package controller
 
 import (
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
 	"pagination/common/util/queryutils"
 	"pagination/common/util/result"
 	"pagination/domain/entities"
 	"pagination/service"
-	"strconv"
-	"strings"
-
-	"github.com/gin-gonic/gin"
 )
 
 type ProductController struct {
@@ -26,25 +24,9 @@ func (productController *ProductController) RegisterProductRoutes(server *gin.En
 }
 
 func (productController *ProductController) GetProducts(c *gin.Context) {
-	pageStr := c.DefaultQuery("page", "1")
-	limitStr := c.DefaultQuery("limit", "20")
-	sort := strings.ReplaceAll(c.DefaultQuery("sort", "id_desc"), "_", " ")
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		page = 1
-	}
-
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit < 1 {
-		limit = 20
-	}
-
-	pagination := queryutils.Pagination{
-		Limit: limit,
-		Page:  page,
-		Sort:  sort,
-	}
-	products, err := productController.productService.GetProducts(pagination)
+	queryHandler := queryutils.QueryParser(c)
+	fmt.Println(queryHandler)
+	products, err := productController.productService.GetProducts(queryHandler)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, result.NewResult(false, "Failed to fetch products"))
 		return
