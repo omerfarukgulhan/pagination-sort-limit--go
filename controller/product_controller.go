@@ -25,13 +25,13 @@ func (productController *ProductController) RegisterProductRoutes(server *gin.En
 func (productController *ProductController) GetProducts(c *gin.Context) {
 	queryHandler, err := queryutils.QueryParser(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, result.NewResult(false, err.Error()))
+		c.JSON(http.StatusBadRequest, result.NewResult(false, "Invalid query parameters: "+err.Error()))
 		return
 	}
 
 	products, err := productController.productService.GetProducts(queryHandler)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, result.NewResult(false, "Failed to fetch products"))
+		c.JSON(http.StatusInternalServerError, result.NewResult(false, "Failed to fetch products: "+err.Error()))
 		return
 	}
 
