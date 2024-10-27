@@ -1,8 +1,11 @@
 package queryutils
 
 import (
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"math"
+	"strconv"
+	"strings"
 )
 
 type Pagination struct {
@@ -11,7 +14,7 @@ type Pagination struct {
 	Sort       string      `json:"sort,omitempty" query:"sort"`
 	TotalRows  int64       `json:"totalRows"`
 	TotalPages int         `json:"totalPages"`
-	Rows       interface{} `json:"rows"`
+	Data       interface{} `json:"data"`
 }
 
 func (pagination *Pagination) GetOffset() int {
@@ -49,4 +52,24 @@ func Paginate(value interface{}, pagination *Pagination, db *gorm.DB) func(db *g
 	return func(db *gorm.DB) *gorm.DB {
 		return db.Offset(pagination.GetOffset()).Limit(pagination.GetLimit()).Order(pagination.GetSort())
 	}
+}
+
+func ParsePagination(c *gin.Context) Pagination {
+	pageStr := c.DefaultQuery("page", "1")
+	limitStr := c.DefaultQuery("limit", "20")
+	sort := strings.ReplaceAll(c.DefaultQuery("sort", "id_desc"), "_", " ")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page < 1 {
+		page = 1
+	}
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = 20
+	}
+	pagination := Pagination{
+		Limit: limit,
+		Page:  page,
+		Sort:  sort,
+	}
+	return pagination
 }
