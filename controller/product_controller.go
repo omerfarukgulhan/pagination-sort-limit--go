@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"pagination/common/util/queryutils"
@@ -24,8 +23,12 @@ func (productController *ProductController) RegisterProductRoutes(server *gin.En
 }
 
 func (productController *ProductController) GetProducts(c *gin.Context) {
-	queryHandler := queryutils.QueryParser(c)
-	fmt.Println(queryHandler)
+	queryHandler, err := queryutils.QueryParser(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, result.NewResult(false, err.Error()))
+		return
+	}
+
 	products, err := productController.productService.GetProducts(queryHandler)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, result.NewResult(false, "Failed to fetch products"))

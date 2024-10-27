@@ -9,12 +9,18 @@ type QueryHandler struct {
 	Filters    []Filter   `json:"filters"`
 }
 
-func QueryParser(c *gin.Context) QueryHandler {
-	pagination := ParsePagination(c)
-	filters := ParseFilters(c)
+func QueryParser(c *gin.Context) (QueryHandler, error) {
+	pagination, err := ParsePagination(c)
+	if err != nil {
+		return QueryHandler{}, err
+	}
+	filters, err := ParseFilters(c)
+	if err != nil {
+		return QueryHandler{}, err
+	}
 	queryHandler := QueryHandler{
 		Pagination: pagination,
 		Filters:    filters,
 	}
-	return queryHandler
+	return queryHandler, nil
 }
