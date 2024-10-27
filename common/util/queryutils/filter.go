@@ -14,7 +14,7 @@ type Filter struct {
 	Op    string
 }
 
-func ApplyFilter(filters []Filter) (func(*gorm.DB) *gorm.DB, error) {
+func FilterQuery(filters []Filter) (func(*gorm.DB) *gorm.DB, error) {
 	var errs []error
 	filterFunc := func(db *gorm.DB) *gorm.DB {
 		for _, filter := range filters {

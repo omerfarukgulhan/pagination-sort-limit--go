@@ -1,7 +1,7 @@
 package persistence
 
 import (
-	"math"
+	"fmt"
 	"pagination/common/util/queryutils"
 	"pagination/domain/entities"
 
@@ -23,17 +23,17 @@ func NewProductRepository(db *gorm.DB) IProductRepository {
 
 func (productRepository *ProductRepository) GetProducts(queryHandler queryutils.QueryHandler) (queryutils.QueryHandler, error) {
 	var products []entities.Product
-	query := productRepository.db.Scopes(queryutils.ApplyFilter(queryHandler.Filters))
-	var totalRows int64
-	if err := query.Model(&entities.Product{}).Count(&totalRows).Error; err != nil {
-		return queryutils.QueryHandler{}, err
+	finalQuery, err := queryutils.ApplyQuery(productRepository.db, queryHandler.Filters, &queryHandler.Pagination, &entities.Product{})
+	if err != nil {
+		return queryHandler, fmt.Errorf("error applying query: %w", err)
 	}
-	queryHandler.Pagination.TotalRows = totalRows
-	queryHandler.Pagination.TotalPages = int(math.Ceil(float64(totalRows) / float64(queryHandler.Pagination.GetLimit())))
-	if err := query.Offset(queryHandler.Pagination.GetOffset()).Limit(queryHandler.Pagination.GetLimit()).Order(queryHandler.Pagination.GetSort()).Find(&products).Error; err != nil {
-		return queryutils.QueryHandler{}, err
+
+	if err := finalQuery.Find(&products).Error; err != nil {
+		return queryutils.QueryHandler{}, fmt.Errorf("error fetching products: %w", err)
 	}
+
 	queryHandler.Pagination.Data = products
+
 	return queryHandler, nil
 }
 
